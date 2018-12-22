@@ -1,4 +1,4 @@
-<?php 
+<?php
 	session_start ();
 	if(isset( $_SESSION['user'])){
 	$username = $_SESSION['user'];
@@ -7,7 +7,30 @@
 		header("Location: layout.php");
 		exit();
 	}
+
+include "ParametrosDB0.php";
+$mysqli = mysqli_connect($server, $user, $pass, $basededatos);
+if (!$mysqli)
+{
+die ("Fallo al conectar a MySQL: " . mysqli_connect_error());
+}
+
 ?>
+<script type="text/javascript">
+
+var run = setInterval(function ActualizarDatos(){
+	<?php
+$resultado = mysqli_query($mysqli, "SELECT COUNT(*) as cant FROM preguntas;" );
+$resultado=mysqli_fetch_assoc($resultado);
+$cantidad=$resultado['cant'];
+$resultadoUsuario = mysqli_query($mysqli, "SELECT COUNT(*) as cant2 FROM preguntas WHERE Direccion ='$username';" );
+$resultadoUsuario=mysqli_fetch_assoc($resultadoUsuario);
+$cantidadUsuario=$resultadoUsuario['cant2'];
+mysqli_close($mysqli);
+?>
+ $( "#totalPreguntas" ).load(window.location.href + " #totalPreguntas" );
+}, 3000);
+</script>
 <html>
   <head>
     <meta name="tipo_contenido" content="text/html;" http-equiv="content-type" charset="utf-8">
@@ -66,18 +89,125 @@
             <p>Tema de la pregunta <strong>(*)</strong></p>
             <input id="tema" style="width:300px" type="text" name="nombreTema" autocomplete="off" placeholder="Ej: HTML"/>
 			<br><br>
-            <input type ="submit" id="botonEnviar" value ="Enviar">Enviar pregunta</input>
+            <input type ="button" id="botonEnviar" value ="Enviar" onclick="insertarPreg()">Enviar pregunta</input>
+			<br><br>
+			<input type ="button" id="botonVerPreguntas" value ="Ver Preguntas" onclick="pedirDatos()">Ver Preguntas</input>
+			<div align ="center" id = "totalPreguntas">
+				<br><p>Total de preguntas: <?php echo $cantidad; ?> </p>
+				<p>Total de preguntas realizadas por ti: <?php echo $cantidadUsuario; ?> </p>
+
+			</div>
+			<div align="center" id = "preguntasXML" >
+
+			</div>
+
         </form>
+
 	</div>
     </section>
-	<footer class='main' id='f1'>
+
+	<footer  class='main' id='f1'>
 		<a href='https://github.com/tszemzo/proyectoSW'>Link GITHUB</a>
 	</footer>
     </div>
 </body>
 </html>
-<script>
-	$('#fpreguntas').submit(function(){
+<script language = "javascript" defer="defer">
+	XMLHttpRequestObject = new XMLHttpRequest();
+	XMLHttpRequestObject.onreadystatechange = function()
+	{
+		if (XMLHttpRequestObject.readyState==4)
+		{
+			var obj = document.getElementById('preguntasXML');
+			var respuesta=XMLHttpRequestObject.responseXML;
+			var totalRespuestas = respuesta.getElementsByTagName('assessmentItem').length;
+			var cabecera =
+			'<table border=1 > <tr> <th> Autor </th> <th> Enunciado </th> <th> Respuesta correcta </th></tr>';
+			var tabla = '<tr>';
+			var hayDatos = false;
+
+			for(var i = 0; i< totalRespuestas; i++){
+				if(respuesta.getElementsByTagName("assessmentItem")[i].getAttribute("author") == document.getElementById("dirCorreo").value)
+				{
+					var autor =respuesta.getElementsByTagName('assessmentItem')[i].getAttribute("author");
+					var pregunta = respuesta.getElementsByTagName('p')[i].childNodes[0].nodeValue;
+					var respuestaCorrecta = get_firstchild(respuesta.getElementsByTagName('correctResponse')[i]);
+					respuestaCorrecta= respuestaCorrecta.childNodes[0].nodeValue;
+					tabla = tabla  +
+							'<td>' + autor + '</td>' +
+							'<td>' + pregunta + '</td>' +
+							'<td>' + respuestaCorrecta + '</td>' + '</td></tr>';
+					hayDatos = true;
+				}
+
+			}
+
+			var Tablafinal = cabecera + tabla + '</td></table>';
+			if(hayDatos == true){
+				obj.innerHTML =Tablafinal;
+			}
+			else{
+				obj.innerHTML = "No hay preguntas insertadas por tu usuario";
+			}
+		}
+	}
+	function pedirDatos()
+	{
+		XMLHttpRequestObject.open("GET","preguntas.xml?q="+ new Date().getTime());
+		XMLHttpRequestObject.send(null);
+	}
+
+	function get_firstchild(n) {
+    var x = n.firstChild;
+    while (x.nodeType != 1) {
+        x = x.nextSibling;
+    }
+    return x;
+}
+
+
+	function insertarEnTabla(autor, tema, pregunta, respuestaCorrecta, respuestaInorrecta1, respuestaInorrecta2, respuestaInorrecta3)
+	{
+
+		var tabla = tabla +'<tr>' +
+						'<td>' + autor + '</td>'
+						'<td>' + tema + '</td>'
+						'<td>' + pregunta + '</td>'
+						'<td>' + respuestaCorrecta + '</td>'
+						'<td>' + respuestaInorrecta1 + '</td>'
+						'<td>' + respuestaInorrecta2 + '</td>'
+						'<td>' + respuestaInorrecta3 + '</td></tr>';
+		return tabla;
+
+	}
+	function insertarPreg(){
+		var data = $("#fpreguntas").serialize();
+		var correo = document.getElementById("dirCorreo").value;
+		$.ajax({
+			data: data,
+			type: "POST",
+			url: "InsertarPregunta.php?email="+correo,
+			cache : false,
+			success: function(data) {
+				//nuevo
+				var bien = validarDatos();
+				if(bien == true){
+					pedirDatos();
+					document.getElementById("fpreguntas").reset();
+				}
+				else{
+					alert("No se guardo");
+					return false;
+				}
+
+			},
+			error: function() {
+				alert('error handling here');
+			}
+		});
+	}
+
+	function validarDatos(){
         // valida campos nulos
         var form = $('#fpreguntas');
 		var mensaje = "";
@@ -113,7 +243,7 @@
 		}
 		alert("Pregunta enviada correctamente.");
 		return true;
-	});
+	}
 
     function validarNulos(obj){
         //Función para comprobar los campos de texto
@@ -146,9 +276,13 @@
 	function errorCampo(campoConError){
 		campoConError.addClass('error');
 	}
-	
+	function ActualizarDatos(){
+
+
+	}
+
+
 	$('#url').click(function(){
 	alert("Agur!")});
 
 </script>
-

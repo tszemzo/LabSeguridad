@@ -1,4 +1,4 @@
-<?php 
+<?php
 	session_start ();
 	if(isset( $_SESSION['user'])){
 	$username = $_SESSION['user'];
@@ -31,7 +31,7 @@
 		<h2>Quiz: Juego de las preguntas</h2>
     </header>
 	<nav class='main' id='n1' role='navigation'>
-	    <span><a href='layout.php?email=<?php echo $username; ?>'>Inicio</a></span>
+		<span><a href='layout.php?email=<?php echo $username; ?>'>Inicio</a></span>
 		<span><a href='GestionPreguntas.php?email=<?php echo $username; ?>'>Gestionar Preguntas</a></span>
 		<span><a href='preguntas.php?email=<?php echo $username; ?>'>Insertar Pregunta</a></span>
 		<span><a href='verDatos.php?email=<?php echo $username; ?>'>Ver preguntas</a></span>
@@ -40,29 +40,20 @@
 
     <section class="main" id="s1">
     <div>
-		<table border=1> <tr> <th> Direccion </th> <th> Pregunta </th> <th> RespCorrecta </th>
-		<th> RespIncorrecta1 </th> <th> RespIncorrecta2 </th> <th> RespIncorrecta3 </th>
-		<th> Complejidad </th> <th> Tema </th>
-		</tr>
+		<table border=1> <tr> <th> Autor </th> <th> Pregunta </th>
+        <th> RespCorrecta </th> </tr>
 
 <?php
-include "ParametrosDB0.php";
-$mysqli = mysqli_connect($server, $user, $pass, $basededatos);
-if (!$mysqli)
-{
-die ("Fallo al conectar a MySQL: " . mysqli_connect_error());
+
+$xml = simplexml_load_file("preguntas.xml");
+foreach ($xml->children() as $pregunta){
+    echo '<tr ><td>' . $pregunta['author'] .
+    '</td> <td>' . $pregunta->itemBody->p .
+    '</td> <td>'. $pregunta->correctResponse->value .
+    '</td> </tr>';
 }
-$preguntas = mysqli_query($mysqli, "SELECT * FROM preguntas;" );
-	while ($row = mysqli_fetch_array( $preguntas )) {
-	echo '<tr><td>' . $row[0] . '</td> <td>' . $row[1] .
-	'</td> <td>' . $row[2] .'</td> <td>' . $row[3] .'</td>
-	<td>' . $row[4] .'</td> <td>' . $row[5] .'</td>
-	<td>' . $row[6] .'</td> <td>' . $row[7] .'</td>
-	</tr>';
-	}
-	echo '</table> </div> </section> </body>';
-$preguntas->close();
-mysqli_close($mysqli);
+echo '</table> </div> </section> </body>';
+
 ?>
 <script>
 	$('#url').click(function(){

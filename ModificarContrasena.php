@@ -17,24 +17,28 @@
 		else{
 			$_SESSION['admin'] = "NO";
 		}
+		
+$queryEstado = "SELECT * FROM usuarios WHERE Direccion = '$username'";
+$result = mysqli_query($mysqli, $queryEstado);
+$row = mysqli_fetch_assoc($result);
+$contrasena_hashed =  $row['Contrasena'];
 
-		$queryEstado = "SELECT * FROM usuarios WHERE Direccion = '$username'";
-		$result = mysqli_query($mysqli, $queryEstado);
-		$row = mysqli_fetch_assoc($result);
-		$contrasena_hashed =  $row['Contrasena'];
 
-		if(password_verify($contrasena, $contrasena_hashed)){
-			$usuarios = mysqli_query($mysqli,"SELECT * FROM usuarios WHERE Direccion = '$username'");
-			$cont = mysqli_num_rows($usuarios); //Se verifica el total de filas devueltas
-			mysqli_close($mysqli); //cierra la conexion
-		}
-		else {
-			$usuarios = mysqli_query($mysqli,"SELECT * FROM usuarios
-			WHERE Direccion = '$username' and Contrasena = '$contrasena'");
-			$cont = mysqli_num_rows($usuarios); //Se verifica el total de filas devueltas
-			mysqli_close($mysqli); //cierra la conexion
-		}
+$verify = password_verify($contrasena, $row['Contrasena']);
+	if($verify){
+	$usuarios = mysqli_query($mysqli,"SELECT * FROM usuarios
+	WHERE Direccion = '$username'");
+	$cont = mysqli_num_rows($usuarios); //Se verifica el total de filas devueltas
+	mysqli_close($mysqli); //cierra la conexion
 	}
+	else {
+		$usuarios = mysqli_query($mysqli,"SELECT * FROM usuarios
+	WHERE Direccion = '$username' and Contrasena = '$contrasena'");
+	$cont = mysqli_num_rows($usuarios); //Se verifica el total de filas devueltas
+	mysqli_close($mysqli); //cierra la conexion
+		
+	}
+}
 ?>
 
 <html>
@@ -88,12 +92,9 @@
 
     <section class="main" id="s1">
     <div>
-        <form id='login' name='login' action='login.php' method = 'post'>
-        	<p>Email <strong>(*)</strong>:</p>
-        	<input id="Email" style="width:300px" type="text" name="Email" autocomplete="off" placeholder="Ej: tszemzo001@ikasle.ehu.eus"/>
-
-        	<p>Contrasena <strong>(*)</strong></p>
-        	<input id="Contrasena" style="width:300px" type="password" name="Contrasena" autocomplete="off"/>
+        <form id='reset_password' name='reset_password' action='reset_password.php' method = 'post'>
+        	<p>Introduce el email con el que te registraste <strong>(*)</strong>:</p>
+        	<br><input id="Email" style="width:300px" type="text" name="Email" autocomplete="off" placeholder="Ej: tszemzo001@ikasle.ehu.eus"/>
 
 			<br><br>
             <input type ="submit" id="botonEnviar" value ="Enviar"></input>
@@ -103,8 +104,10 @@
 		<?php if($cont==1 && $_SESSION['admin'] == "NO" ){?>
 			<script>alert('Bienvenido al Sistema: "<?php echo $username; ?>" ')</script>
 
+
+
 			<p>Login correcto</p><a href='preguntas.php?email=<?php echo $username; ?>'>Puede insertar preguntas</a>
-		<?php }
+		<?php }		
 		 else if($cont==1 && $_SESSION['admin'] == "SI" ){?>
 			<script>alert('Bienvenido al Sistema: "<?php echo $username; ?>" ')</script>
 

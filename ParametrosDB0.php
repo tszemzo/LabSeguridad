@@ -3,7 +3,7 @@ $local=0; //0 para la aplicación en 000WebHost
 if ($local==1){
 $server="localhost";
 $user="root";
-$pass="";
+$pass="admin";
 $basededatos="quiz";
 }
 else{

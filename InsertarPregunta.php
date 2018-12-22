@@ -1,6 +1,11 @@
-<?php 
-	if(isset( $_GET['email'])){
-	$username = $_GET['email'];
+<?php
+	session_start ();
+	if(isset( $_SESSION['user'])){
+	$username = $_SESSION['user'];
+	}
+	else{
+		header("Location: layout.php");
+		exit();
 	}
 ?>
 <html>
@@ -21,13 +26,16 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
   <div id='page-wrap' height = "1000px">
 	<header class='main' id='h1'>
-		<span class="right" ><a href="layout.php" id = "url" >Logout</a></span>
+		<span class="right" ><a href="logout.php" id = "url" >Logout</a></span>
+		<span class="right"> <font size= "2.5" >Bienvenido: <?php echo $username; ?></font></span>
 		<h2>Quiz: el juego de las preguntas</h2>
     </header>
 	   <nav class='main' id='n1' role='navigation'>
-	    <span><a href='layout.php?email=<?php echo $username; ?>'>Inicio</a></spam>
-		<span><a href='preguntas.php?email=<?php echo $username; ?>'>Insertar Pregunta</a></spam>
-	    <span><a href='creditos.php?email=<?php echo $username; ?>'>Creditos</a></spam>
+			<span><a href='layout.php?email=<?php echo $username; ?>'>Inicio</a></span>
+			<span><a href='GestionPreguntas.php?email=<?php echo $username; ?>'>Gestionar Preguntas</a></span>
+			<span><a href='preguntas.php?email=<?php echo $username; ?>'>Insertar Pregunta</a></span>
+			<span><a href='verDatos.php?email=<?php echo $username; ?>'>Ver preguntas</a></span>
+			<span><a href='creditos.php?email=<?php echo $username; ?>'>Creditos</a></span>
 	   </nav>
 
     <section class="main" id="s1">
@@ -62,6 +70,11 @@ $tema= $_POST['nombreTema'];
 if ($correo != "" && $pregunta != "" && $respuesta !="" && $respuestaInc1 != "" && $respuestaInc2 != ""
 && $respuestaInc3 != "" && $complejidad != "" && $tema!= ""){
 
+	if(strlen($pregunta) <10)
+	{
+		$correoError = "el enunciado debe tener mas de 10 caravteres";
+		die ( $correoError . mysqli_connect_error());
+	}
 	if (!preg_match("/^([a-zA-Z_.+-])+[0-9]{3}\@ikasle.ehu.eus+$/",$correo)) {
 		$correoError = "El correo no cumple el formato requerido";
 		die ( $correoError . mysqli_connect_error());
@@ -70,18 +83,16 @@ if ($correo != "" && $pregunta != "" && $respuesta !="" && $respuestaInc1 != "" 
 		$complejidadError = "La complejidad debe estar entre 0 y 5";
 		die ( $complejidadError . mysqli_connect_error());
 	}
-}
-else{
-	 die ( "Algun campo obligatorio vacio" . mysqli_connect_error());
-}
 
-$sql="INSERT INTO preguntas(Direccion, Pregunta, RespCorrecta, RespIncorrecta1,
+	$sql="INSERT INTO preguntas(Direccion, Pregunta, RespCorrecta, RespIncorrecta1,
 RespIncorrecta2, RespIncorrecta3, Complejidad, Tema) VALUES
 ('$_POST[nombreDirCorreo]','$_POST[nombrePregunta]','$_POST[nombreRespCorrecta]',
 '$_POST[nombreRespIncorrecta1]', '$_POST[nombreRespIncorrecta2]','$_POST[nombreRespIncorrecta3]'
 ,'$_POST[nombreComplejidad]','$_POST[nombreTema]')";
-
-//echo $sql;
+}
+else{
+	 die ( "Algun campo obligatorio vacio" . mysqli_connect_error());
+}
 
 if (!mysqli_query($mysqli ,$sql))
 {
@@ -89,9 +100,42 @@ die('Error en el almacenamiento de la pregunta: ' . mysqli_error($mysqli));
 }
 
 echo "<strong>Pregunta almacenada correctamente.</strong>";
+
+// Almacenar tambien en el XML
+
+if (file_exists('preguntas.xml')) {
+    $xml = simplexml_load_file('preguntas.xml');
+}
+else {
+    exit('Error abriendo preguntas.xml.');
+}
+$item = $xml->addChild ('assessmentItem');
+$item-> addAttribute ('subject', $tema);
+$item-> addAttribute ('author', $correo);
+
+$body = $item->addChild('itemBody');
+$body->addChild('p', $pregunta);
+
+$correct = $item->addChild('correctResponse');
+$correct->addChild('value',$respuesta);
+
+$incorrect = $item->addChild('incorrectResponses');
+$incorrect->addChild('value',$respuestaInc1);
+$incorrect->addChild('value',$respuestaInc2);
+$incorrect->addChild('value',$respuestaInc3);
+
+if (!$xml->asXML('preguntas.xml'))
+{
+	die('Error en el almacenamiento del XML');
+}
+else {
+	echo "<strong>pregunta almacenada en el XML correctamente.</strong>";
+}
+print_r($xml);
 ?>
 <html>
 <p> <a href='verDatos.php?email=<?php echo $username; ?>'> Ver preguntas </a>
+<p> <a href='verPreguntasXML.php?email=<?php echo $username; ?>'> Ver preguntas XML </a>
 </html>
 <?php
 mysqli_close($mysqli);
